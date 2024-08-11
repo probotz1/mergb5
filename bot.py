@@ -20,7 +20,7 @@ app = Client(
 # Store video files for users
 user_video = {}
 
-def progress_bar(current, total, message: Message, action="Uploading"):
+def progress_bar(current, total, message: Message, start_time, action="Uploading"):
     percentage = current * 100 / total
     progress = int(percentage // 5)
     progress_message = f"{action}...\n\n" \
@@ -40,7 +40,8 @@ async def start_command(client, message: Message):
 
 @app.on_message(filters.video)
 async def video_handler(client, message: Message):
-    user_video[message.from_user.id] = await message.download(progress=progress_bar, progress_args=(message, "Downloading Video"))
+    start_time = time.time()
+    user_video[message.from_user.id] = await message.download(progress=progress_bar, progress_args=(message, start_time, "Downloading Video"))
     await message.reply("Video downloaded. Now, please send the audio file you want to merge with the video.")
 
 @app.on_message(filters.audio)
@@ -51,14 +52,20 @@ async def audio_handler(client, message: Message):
         await message.reply("Please send a video file first.")
         return
 
-    audio = await message.download(progress=progress_bar, progress_args=(message, "Downloading Audio"))
+    start_time = time.time()
+    audio = await message.download(progress=progress_bar, progress_args=(message, start_time, "Downloading Audio"))
     video = user_video.pop(user_id)
     
     output_file = "output.mp4"
-    merge_video_audio(video, audio, output_file)
+    
+    try:
+        merge_video_audio(video, audio, output_file)
+    except Exception as e:
+        await message.reply(f"An error occurred during merging: {e}")
+        return
 
     start_time = time.time()
-    await message.reply_video(output_file, progress=progress_bar, progress_args=(message, "Uploading"))
+    await message.reply_video(output_file, progress=progress_bar, progress_args=(message, start_time, "Uploading"))
 
     os.remove(video)
     os.remove(audio)
