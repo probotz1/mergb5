@@ -11,9 +11,9 @@ BOT_TOKEN = "your_bot_token"
 
 app = Client(
     "my_bot",
-    api_id=API_ID,
-    api_hash=API_HASH,
-    bot_token=BOT_TOKEN
+    api_id=28015531,
+    api_hash=2ab4ba37fd5d9ebf1353328fc915ad28,
+    bot_token=7321073695:AAE2ZvYJg6_dQNhEvznmRCSsKMoNHoQWnuI
 )
 
 def progress_bar(current, total, message: Message, action="Uploading"):
