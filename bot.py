@@ -4,7 +4,7 @@ from ffmpeg import merge_video_audio
 import os
 import time
 
-# Replace these with your actual credentials
+# API credentials
 API_ID = "28015531"
 API_HASH = "2ab4ba37fd5d9ebf1353328fc915ad28"
 BOT_TOKEN = "7321073695:AAE2ZvYJg6_dQNhEvznmRCSsKMoNHoQWnuI"
@@ -13,8 +13,12 @@ app = Client(
     "my_bot",
     api_id=API_ID,
     api_hash=API_HASH,
-    bot_token=BOT_TOKEN
+    bot_token=BOT_TOKEN,
+    sleep_threshold=10
 )
+
+# Store video files for users
+user_video = {}
 
 def progress_bar(current, total, message: Message, action="Uploading"):
     percentage = current * 100 / total
@@ -30,19 +34,30 @@ def progress_bar(current, total, message: Message, action="Uploading"):
 
     message.edit(progress_message)
 
-@app.on_message(filters.command("merge"))
-async def merge_handler(client, message: Message):
-    if not message.reply_to_message or not message.reply_to_message.video or not message.reply_to_message.audio:
-        await message.reply("Please reply to a video and an audio file to merge them.")
+@app.on_message(filters.command("start"))
+async def start_command(client, message: Message):
+    await message.reply("Welcome! Send me a video file to start the merging process.")
+
+@app.on_message(filters.video)
+async def video_handler(client, message: Message):
+    user_video[message.from_user.id] = await message.download(progress=progress_bar, progress_args=(message, "Downloading Video"))
+    await message.reply("Video downloaded. Now, please send the audio file you want to merge with the video.")
+
+@app.on_message(filters.audio)
+async def audio_handler(client, message: Message):
+    user_id = message.from_user.id
+
+    if user_id not in user_video:
+        await message.reply("Please send a video file first.")
         return
 
-    start_time = time.time()
-    video = await message.reply_to_message.download(progress=progress_bar, progress_args=(message, "Downloading Video"))
-    audio = await message.reply_to_message.download(progress=progress_bar, progress_args=(message, "Downloading Audio"))
-
+    audio = await message.download(progress=progress_bar, progress_args=(message, "Downloading Audio"))
+    video = user_video.pop(user_id)
+    
     output_file = "output.mp4"
     merge_video_audio(video, audio, output_file)
 
+    start_time = time.time()
     await message.reply_video(output_file, progress=progress_bar, progress_args=(message, "Uploading"))
 
     os.remove(video)
